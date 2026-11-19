@@ -15,7 +15,8 @@
 
 x-nas: &nas
   placement:
-    constraints: [node.labels.ubicacion == nas]
+    # El NAS: tiene la label y es worker. El VPS es manager: aunque le pongan la label por error, acá no cae.
+    constraints: [node.labels.ubicacion == nas, node.role == worker]
   restart_policy: {condition: any}
 
 services:
