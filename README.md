@@ -2,7 +2,7 @@
 
 Stacks que corren en el TrueNAS (worker del swarm, label `ubicacion=nas`), manejados por swarmdeck.
 
-## holyarr: HolyArrs + SABnzbd (Usenet)
+## holyarr: HolyArrs + SABnzbd (Usenet) + qBittorrent (torrents)
 
 ### 1. Lo que hace falta afuera
 
@@ -15,10 +15,16 @@ Stacks que corren en el TrueNAS (worker del swarm, label `ubicacion=nas`), manej
 
 ```bash
 id apps        # uid y gid: si no son 568, cambialos en docker-stack.yml (PUID/PGID)
-sudo mkdir -p /mnt/HomePool/holyarr/config/{holyarrs,sabnzbd} \
-              /mnt/HomePool/holyarr/data/{downloads/incomplete,downloads/complete,movies,tv,music}
+sudo mkdir -p /mnt/HomePool/holyarr/config/holyarrs /mnt/HomePool/holyarr/config/sabnzbd \
+  /mnt/HomePool/holyarr/config/qbittorrent \
+  /mnt/HomePool/holyarr/data/downloads/incomplete /mnt/HomePool/holyarr/data/downloads/complete \
+  /mnt/HomePool/holyarr/data/downloads/torrents \
+  /mnt/HomePool/holyarr/data/movies /mnt/HomePool/holyarr/data/tv /mnt/HomePool/holyarr/data/music
 sudo chown -R apps:apps /mnt/HomePool/holyarr
 ```
+
+Swarm no crea las carpetas de los volúmenes: si falta una, el servicio no arranca ("bind source path does
+not exist").
 
 Si el dataset tiene permisos tipo ACL, dale el dueño `apps` desde Datasets → holyarr → Permissions.
 
@@ -40,11 +46,25 @@ Si el dataset tiene permisos tipo ACL, dale el dueño `apps` desde Datasets → 
 3. **Config → Special → host_whitelist**: agregar `sabnzbd` (así HolyArrs puede llamarlo por nombre).
 4. **Config → General**: copiar la **API Key**.
 
-### 5. HolyArrs (http://IP_TAILSCALE_DEL_NAS:6262)
+### 5. qBittorrent (http://IP_TAILSCALE_DEL_NAS:8081)
+
+1. La primera vez genera una contraseña temporal para `admin`: está en los logs del servicio
+   (swarmdeck → Stacks → holyarr → Logs de `qbittorrent`, buscar "temporary password").
+   Entrá y cambiala en **Tools → Options → Web UI**.
+2. **Options → Downloads**: guardar en `/data/downloads/torrents`.
+3. **Options → Connection**: puerto `6881`. Para que bajen bien, abrí el 6881 TCP y UDP en el router de
+   casa hacia el NAS (es el único puerto que va a internet; la interfaz web nunca).
+4. **Options → BitTorrent**: conviene limitar el ratio o el tiempo de seed.
+
+Ojo: por torrent, los demás ven la IP pública de tu casa. Si eso te importa, se puede pasar qBittorrent
+por una VPN comercial (con gluetun); preguntá antes de hacerlo.
+
+### 6. HolyArrs (http://IP_TAILSCALE_DEL_NAS:6262)
 
 1. **Entrar enseguida**: el primero que entra crea la cuenta de dueño.
 2. Bibliotecas: `/data/movies`, `/data/tv`, `/data/music`.
-3. Descargador: SABnzbd en `http://sabnzbd:8080` con la API key.
+3. Descargadores: SABnzbd en `http://sabnzbd:8080` con la API key, y qBittorrent en
+   `http://qbittorrent:8081` con su usuario y contraseña.
 4. Sources: los indexadores, con su API key.
 
-Nunca abrir 6262 ni 8080 a internet: se entra por Tailscale.
+Nunca abrir 6262, 8080 ni 8081 a internet: se entra por Tailscale. Solo el 6881 (torrents) va al router.

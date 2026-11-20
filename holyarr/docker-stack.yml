@@ -1,15 +1,17 @@
-# HolyArrs (series, películas y música) + SABnzbd (descargas por Usenet), en el TrueNAS.
+# HolyArrs (series, películas y música) + SABnzbd (Usenet) + qBittorrent (torrents), en el TrueNAS.
 #
 # Todo vive en el dataset /mnt/HomePool/holyarr:
 #   config/holyarrs   base y ajustes de HolyArrs
 #   config/sabnzbd    ajustes de SABnzbd
+#   config/qbittorrent ajustes de qBittorrent
 #   data/             lo que ven los dos, en la MISMA ruta (/data): así pasar de descargas a la
 #     downloads/      biblioteca es instantáneo (un movimiento, no una copia)
 #     movies/  tv/  music/
 #
 # Los puertos van en modo host: escuchan solo en el NAS (con el modo de siempre de Swarm, quedarían
 # abiertos en todos los nodos, también en la IP pública del VPS). Se entra por Tailscale.
-# Los dos hablan entre sí por la red del stack: HolyArrs llega a SABnzbd como http://sabnzbd:8080.
+# Hablan entre sí por la red del stack: HolyArrs llega a SABnzbd como http://sabnzbd:8080 y a qBittorrent
+# como http://qbittorrent:8081.
 #
 # Monta carpetas del NAS: en stacks.yml este stack va con `trusted: true`.
 
@@ -46,4 +48,22 @@ services:
       - /mnt/HomePool/holyarr/data:/data
     ports:
       - {target: 8080, published: 8080, mode: host}
+    deploy: *nas
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    environment:
+      PUID: "568"
+      PGID: "568"
+      TZ: America/Argentina/Buenos_Aires
+      UMASK: "002"
+      WEBUI_PORT: "8081"                    # el 8080 ya lo usa SABnzbd
+      TORRENTING_PORT: "6881"
+    volumes:
+      - /mnt/HomePool/holyarr/config/qbittorrent:/config
+      - /mnt/HomePool/holyarr/data:/data   # descarga en /data/downloads/torrents
+    ports:
+      - {target: 8081, published: 8081, mode: host}             # interfaz web: solo por Tailscale
+      - {target: 6881, published: 6881, protocol: tcp, mode: host}  # pares de torrent
+      - {target: 6881, published: 6881, protocol: udp, mode: host}
     deploy: *nas
