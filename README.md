@@ -2,7 +2,9 @@
 
 Stacks que corren en el TrueNAS (worker del swarm, label `ubicacion=nas`), manejados por swarmdeck.
 
-## holyarr: HolyArrs + SABnzbd (Usenet) + qBittorrent (torrents)
+## holyarr: HolyArrs + SABnzbd (Usenet) + qBittorrent (torrents) + Jellyfin
+
+`IP_DEL_NAS`: en casa, la del NAS en la red local; desde afuera, la de Tailscale.
 
 ### 1. Lo que hace falta afuera
 
@@ -16,7 +18,7 @@ Stacks que corren en el TrueNAS (worker del swarm, label `ubicacion=nas`), manej
 ```bash
 id apps        # uid y gid: si no son 568, cambialos en docker-stack.yml (PUID/PGID)
 sudo mkdir -p /mnt/HomePool/holyarr/config/holyarrs /mnt/HomePool/holyarr/config/sabnzbd \
-  /mnt/HomePool/holyarr/config/qbittorrent \
+  /mnt/HomePool/holyarr/config/qbittorrent /mnt/HomePool/holyarr/config/jellyfin \
   /mnt/HomePool/holyarr/data/downloads/incomplete /mnt/HomePool/holyarr/data/downloads/complete \
   /mnt/HomePool/holyarr/data/downloads/torrents \
   /mnt/HomePool/holyarr/data/movies /mnt/HomePool/holyarr/data/tv /mnt/HomePool/holyarr/data/music
@@ -39,14 +41,14 @@ Si el dataset tiene permisos tipo ACL, dale el dueño `apps` desde Datasets → 
    `sudo systemctl restart swarmdeck`.
 5. **Sincronizar** `holyarr`.
 
-### 4. SABnzbd (http://IP_TAILSCALE_DEL_NAS:8080)
+### 4. SABnzbd (http://IP_DEL_NAS:8080)
 
 1. El asistente pide el servidor de Usenet: el del proveedor, SSL, puerto 563.
 2. **Config → Folders**: temporales `/data/downloads/incomplete`, terminados `/data/downloads/complete`.
 3. **Config → Special → host_whitelist**: agregar `sabnzbd` (así HolyArrs puede llamarlo por nombre).
 4. **Config → General**: copiar la **API Key**.
 
-### 5. qBittorrent (http://IP_TAILSCALE_DEL_NAS:8081)
+### 5. qBittorrent (http://IP_DEL_NAS:8081)
 
 1. La primera vez genera una contraseña temporal para `admin`: está en los logs del servicio
    (swarmdeck → Stacks → holyarr → Logs de `qbittorrent`, buscar "temporary password").
@@ -59,7 +61,7 @@ Si el dataset tiene permisos tipo ACL, dale el dueño `apps` desde Datasets → 
 Ojo: por torrent, los demás ven la IP pública de tu casa. Si eso te importa, se puede pasar qBittorrent
 por una VPN comercial (con gluetun); preguntá antes de hacerlo.
 
-### 6. HolyArrs (http://IP_TAILSCALE_DEL_NAS:6262)
+### 6. HolyArrs (http://IP_DEL_NAS:6262)
 
 1. **Entrar enseguida**: el primero que entra crea la cuenta de dueño.
 2. Bibliotecas: `/data/movies`, `/data/tv`, `/data/music`.
@@ -67,4 +69,18 @@ por una VPN comercial (con gluetun); preguntá antes de hacerlo.
    `http://qbittorrent:8081` con su usuario y contraseña.
 4. Sources: los indexadores, con su API key.
 
-Nunca abrir 6262, 8080 ni 8081 a internet: se entra por Tailscale. Solo el 6881 (torrents) va al router.
+### 7. Jellyfin (http://IP_DEL_NAS:8096)
+
+1. El asistente pide crear el usuario administrador.
+2. Bibliotecas: Películas en `/data/movies`, Series en `/data/tv`, Música en `/data/music` (las ve solo
+   lectura: Jellyfin no mueve ni borra archivos).
+3. En los televisores y teléfonos, la app de Jellyfin lo encuentra sola en casa (puerto 7359/udp); si no,
+   `http://IP_DEL_NAS:8096`.
+4. En HolyArrs, si ofrece avisar a Jellyfin al terminar una descarga: `http://jellyfin:8096` con una API key
+   de Jellyfin (Panel → Claves API).
+
+Sin transcodificación por hardware: Swarm no pasa la GPU del NAS a los servicios. Con apps que reproducen el
+archivo tal cual (lo normal en casa) no hace falta; si se necesita, Jellyfin como App de TrueNAS.
+
+Nunca abrir 6262, 8080, 8081 ni 8096 a internet: en casa por la red local, desde afuera por Tailscale. Solo
+el 6881 (torrents) va al router.
