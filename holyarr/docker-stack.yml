@@ -1,15 +1,18 @@
-# HolyArrs (series, películas y música) + SABnzbd (Usenet) + qBittorrent (torrents), en el TrueNAS.
+# HolyArrs (series, películas y música) + SABnzbd (Usenet) + qBittorrent (torrents) + Jellyfin (para verlas),
+# en el TrueNAS.
 #
 # Todo vive en el dataset /mnt/HomePool/holyarr:
 #   config/holyarrs   base y ajustes de HolyArrs
 #   config/sabnzbd    ajustes de SABnzbd
 #   config/qbittorrent ajustes de qBittorrent
+#   config/jellyfin   base, metadatos y caché de Jellyfin
 #   data/             lo que ven los dos, en la MISMA ruta (/data): así pasar de descargas a la
 #     downloads/      biblioteca es instantáneo (un movimiento, no una copia)
 #     movies/  tv/  music/
 #
 # Los puertos van en modo host: escuchan solo en el NAS (con el modo de siempre de Swarm, quedarían
-# abiertos en todos los nodos, también en la IP pública del VPS). Se entra por Tailscale.
+# abiertos en todos los nodos, también en la IP pública del VPS). En el NAS escuchan en todas sus interfaces:
+# en casa se entra por la red local (la IP del NAS en la LAN) y desde afuera por Tailscale.
 # Hablan entre sí por la red del stack: HolyArrs llega a SABnzbd como http://sabnzbd:8080 y a qBittorrent
 # como http://qbittorrent:8081.
 #
@@ -63,7 +66,24 @@ services:
       - /mnt/HomePool/holyarr/config/qbittorrent:/config
       - /mnt/HomePool/holyarr/data:/data   # descarga en /data/downloads/torrents
     ports:
-      - {target: 8081, published: 8081, mode: host}             # interfaz web: solo por Tailscale
+      - {target: 8081, published: 8081, mode: host}             # interfaz web: LAN o Tailscale, nunca internet
       - {target: 6881, published: 6881, protocol: tcp, mode: host}  # pares de torrent
       - {target: 6881, published: 6881, protocol: udp, mode: host}
     deploy: *nas
+
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    environment:
+      PUID: "568"
+      PGID: "568"
+      TZ: America/Argentina/Buenos_Aires
+      UMASK: "002"
+    volumes:
+      - /mnt/HomePool/holyarr/config/jellyfin:/config
+      - /mnt/HomePool/holyarr/data:/data:ro   # la biblioteca, solo lectura: Jellyfin no toca los archivos
+    ports:
+      - {target: 8096, published: 8096, mode: host}                  # la web y las apps (LAN o Tailscale)
+      - {target: 7359, published: 7359, protocol: udp, mode: host}   # para que las apps lo encuentren solas en casa
+    deploy: *nas
+    # Sin transcodificación por hardware: Swarm no pasa dispositivos (/dev/dri) a los servicios. Si hace falta,
+    # Jellyfin como App de TrueNAS, con las mismas carpetas.
