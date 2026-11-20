@@ -32,6 +32,9 @@ services:
       PGID: "568"
       TZ: America/Argentina/Buenos_Aires
       UMASK: "002"
+      # Dónde deja SABnzbd lo terminado (Config → Folders → Completed). HolyArrs y SABnzbd montan /data en la
+      # misma ruta, así que es la misma carpeta para los dos: no hace falta un par de rutas.
+      HOLYARRS_SAVE_PATH: /data/downloads/complete
     volumes:
       - /mnt/HomePool/holyarr/config/holyarrs:/config
       - /mnt/HomePool/holyarr/data:/data

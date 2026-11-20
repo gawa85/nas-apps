@@ -45,6 +45,8 @@ Si el dataset tiene permisos tipo ACL, dale el dueño `apps` desde Datasets → 
 
 1. El asistente pide el servidor de Usenet: el del proveedor, SSL, puerto 563.
 2. **Config → Folders**: temporales `/data/downloads/incomplete`, terminados `/data/downloads/complete`.
+   HolyArrs ya sabe que lo terminado queda ahí (`HOLYARRS_SAVE_PATH` en el stack): si cambiás esta
+   carpeta, cambiá también esa variable.
 3. **Config → Special → host_whitelist**: agregar `sabnzbd` (así HolyArrs puede llamarlo por nombre).
 4. **Config → General**: copiar la **API Key**.
 
