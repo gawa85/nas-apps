@@ -6,7 +6,7 @@
 
 services:
   swarmdeck:
-    image: swarmdeck:0.35.1                 # se construye en el NAS con el paquete (ver README)
+    image: swarmdeck:0.36.0                 # se construye en el NAS con el paquete (ver README)
     environment:
       SWARMDECK_TOKEN_FILE: /run/secrets/swarmdeck_token
       SWARMDECK_SELF_SERVICE: "{{.Service.Name}}"   # para actualizarse desde el dashboard
@@ -23,7 +23,8 @@ services:
       replicas: 1
       placement:
         constraints: [node.role == manager]
-      update_config: {order: stop-first}    # dos a la vez chocarían por el puerto y los datos
+      update_config: {order: stop-first, failure_action: rollback, monitor: 2m}  # nunca dos a la vez; si no arranca, vuelve
+      rollback_config: {order: stop-first}
       restart_policy: {condition: any, delay: 5s}
 
 secrets:
