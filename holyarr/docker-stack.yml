@@ -25,7 +25,7 @@ x-nas: &nas
 
 services:
   holyarrs:
-    image: holyarrs/holyarrs:1.2.0          # versión fija; para seguir las nuevas: "Seguir imagen"
+    image: holyarrs/holyarrs:1.3.0          # versión fija; para seguir las nuevas: "Seguir imagen"
     environment:
       PUID: "568"                           # el usuario "apps" de TrueNAS (confirmalo con: id apps)
       PGID: "568"
