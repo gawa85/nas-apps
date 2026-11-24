@@ -10,8 +10,7 @@
 #     downloads/      biblioteca es instantáneo (un movimiento, no una copia)
 #     movies/  tv/  music/
 #
-# Los puertos van en modo host: escuchan solo en el NAS (con el modo de siempre de Swarm, quedarían
-# abiertos en todos los nodos, también en la IP pública del VPS). En el NAS escuchan en todas sus interfaces:
+# Los puertos van en modo host: escuchan solo en el NAS, aunque el swarm tenga otros nodos. En el NAS escuchan en todas sus interfaces:
 # en casa se entra por la red local (la IP del NAS en la LAN) y desde afuera por Tailscale.
 # Hablan entre sí por la red del stack: HolyArrs llega a SABnzbd como http://sabnzbd:8080 y a qBittorrent
 # como http://qbittorrent:8081.
@@ -20,8 +19,8 @@
 
 x-nas: &nas
   placement:
-    # El NAS: tiene la label y es worker. El VPS es manager: aunque le pongan la label por error, acá no cae.
-    constraints: [node.labels.ubicacion == nas, node.role == worker]
+    # El NAS, por la label (ya no por el rol: en su propio swarm es manager).
+    constraints: [node.labels.ubicacion == nas]
   restart_policy: {condition: any}
 
 services:

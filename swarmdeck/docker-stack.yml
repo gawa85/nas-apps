@@ -1,0 +1,31 @@
+# swarmdeck del NAS: maneja el swarm propio del TrueNAS (el NAS es su único manager).
+#
+# Se despliega a mano, desde una terminal del NAS (no por GitOps: es el que hace GitOps). Pasos en el README.
+#
+# Los datos van a /mnt/HomePool/swarmdeck y no a /etc ni /opt: TrueNAS no conserva esas carpetas al actualizarse.
+
+services:
+  swarmdeck:
+    image: swarmdeck:0.35.1                 # se construye en el NAS con el paquete (ver README)
+    environment:
+      SWARMDECK_TOKEN_FILE: /run/secrets/swarmdeck_token
+      SWARMDECK_SELF_SERVICE: "{{.Service.Name}}"   # para actualizarse desde el dashboard
+      SWARMDECK_NODES_FILE: /data/nodes.yml
+      TZ: America/Argentina/Buenos_Aires
+    secrets:
+      - swarmdeck_token
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /mnt/HomePool/swarmdeck:/data       # usuarios, stacks.yml, historial, clave SSH
+    ports:
+      - {target: 8000, published: 8000, mode: host}   # LAN o Tailscale; nunca internet
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      update_config: {order: stop-first}    # dos a la vez chocarían por el puerto y los datos
+      restart_policy: {condition: any, delay: 5s}
+
+secrets:
+  swarmdeck_token:
+    external: true

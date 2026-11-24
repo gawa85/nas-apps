@@ -1,6 +1,51 @@
 # nas-apps
 
-Stacks que corren en el TrueNAS (worker del swarm, label `ubicacion=nas`), manejados por swarmdeck.
+Stacks que corren en el TrueNAS, en su propio swarm (el NAS es el único manager, label `ubicacion=nas`),
+manejados por un swarmdeck que corre en el mismo NAS.
+
+## swarmdeck: el swarm propio del NAS
+
+### 1. Si el NAS es worker de otro swarm: salir
+
+1. En el swarmdeck de ese swarm, guardar lo elegido para los stacks del NAS (variables, "Seguir imagen",
+   usuario y token del repo): no viaja solo. Después sacarlos de su `stacks.yml`, reiniciarlo y, en ese
+   manager, `docker stack rm holyarr`.
+2. En el NAS, como root: `docker swarm leave`. No toca las Apps de TrueNAS (Tailscale incluida), SSH,
+   usuarios, datasets, carpetas ni volúmenes.
+3. En el manager viejo, cuando figure `Down`: `docker node rm NOMBRE_DEL_NAS`. No usar la baja de nodo de
+   swarmdeck: también lo saca de la VPN. Si el NAS es destino de backups (`node:...`), tiene
+   que seguir en el inventario (`nodes.yml`) de ese swarmdeck: los backups van por SSH, no por el swarm.
+
+### 2. Crear el swarm
+
+```bash
+docker swarm init --advertise-addr IP_LAN_DEL_NAS
+docker node update --label-add ubicacion=nas "$(docker info -f '{{.Swarm.NodeID}}')"
+```
+
+La IP de la red local (fija o reservada en el router), no la de Tailscale: si Tailscale corre como App,
+arranca después que Docker, y al prender el NAS esa IP todavía no existe.
+
+### 3. Instalar swarmdeck
+
+Copiar `swarmdeck-X.Y.Z-linux.tar.gz` y `swarmdeck/docker-stack.yml` a `/mnt/HomePool/swarmdeck-instalar`
+y, como root:
+
+```bash
+cd /mnt/HomePool/swarmdeck-instalar
+ss -ltn | grep ':8000 '                      # no tiene que mostrar nada (si no, cambiar published)
+tar xzf swarmdeck-0.35.1-linux.tar.gz
+docker build -t swarmdeck:0.35.1 swarmdeck-0.35.1
+mkdir -p /mnt/HomePool/swarmdeck && chmod 700 /mnt/HomePool/swarmdeck
+( umask 077; printf '%s' "$(openssl rand -hex 32)" > token )
+docker secret create swarmdeck_token token
+docker stack deploy --resolve-image never -c docker-stack.yml swarmdeck
+cat token; echo                              # para entrar; guardarlo y después: rm token
+```
+
+Entrar en `http://IP_LAN_DEL_NAS:8000` (o la de Tailscale). Nunca abrir el 8000 a internet.
+
+Para actualizar: construir la imagen nueva, cambiar `image:` y repetir el `docker stack deploy`.
 
 ## holyarr: HolyArrs + SABnzbd (Usenet) + qBittorrent (torrents) + Jellyfin
 
@@ -32,14 +77,10 @@ Si el dataset tiene permisos tipo ACL, dale el dueño `apps` desde Datasets → 
 
 ### 3. En swarmdeck
 
-1. **Red → Probar red overlay**: el NAS tiene que dar "anda".
-2. **Cluster → el NAS**: Terminar mantenimiento y **Labels… → `ubicacion=nas`**.
-3. Este repo en GitHub (privado) → **Instalación → Stacks**: agregar `holyarr` con
-   `holyarr/docker-stack.yml`.
-4. Como monta carpetas del NAS, el stack tiene que ser de confianza: en el VPS, en
-   `/var/lib/swarmdeck/stacks.yml`, agregar `trusted: true` a su entrada y
-   `sudo systemctl restart swarmdeck`.
-5. **Sincronizar** `holyarr`.
+1. **Cluster → el NAS**: tiene que estar disponible y con la label `ubicacion=nas`.
+2. **Instalación → Stacks**: agregar este repo como `holyarr`, con `holyarr/docker-stack.yml` y la casilla
+   de confianza (monta carpetas del NAS). Después, reiniciar swarmdeck desde ahí.
+3. **Sincronizar** `holyarr`.
 
 ### 4. SABnzbd (http://IP_DEL_NAS:8080)
 
