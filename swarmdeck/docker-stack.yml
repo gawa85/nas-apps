@@ -6,7 +6,7 @@
 
 services:
   swarmdeck:
-    image: swarmdeck:0.36.1                 # se construye en el NAS con el paquete (ver README)
+    image: swarmdeck:0.37.0                 # se construye en el NAS con el paquete (ver README)
     environment:
       SWARMDECK_TOKEN_FILE: /run/secrets/swarmdeck_token
       SWARMDECK_SELF_SERVICE: "{{.Service.Name}}"   # para actualizarse desde el dashboard
