@@ -34,8 +34,8 @@ y, como root:
 ```bash
 cd /mnt/HomePool/swarmdeck-instalar
 ss -ltn | grep ':8000 '                      # no tiene que mostrar nada (si no, cambiar published)
-tar xzf swarmdeck-0.38.0-linux.tar.gz
-docker build -t swarmdeck:0.38.0 swarmdeck-0.38.0
+tar xzf swarmdeck-0.39.0-linux.tar.gz
+docker build -t swarmdeck:0.39.0 swarmdeck-0.39.0
 mkdir -p /mnt/HomePool/swarmdeck && chmod 700 /mnt/HomePool/swarmdeck
 ( umask 077; printf '%s' "$(openssl rand -hex 32)" > token )
 docker secret create swarmdeck_token token
